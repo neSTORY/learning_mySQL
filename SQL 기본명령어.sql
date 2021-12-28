@@ -129,6 +129,170 @@ DELETE
 SELECT * FROM 회원테이블; # 모든 데이터 삭제 확인
 
 
+### DCL (제어어) ###
+
+/* 사용자 확인 */
+-- MYSQL 데이터베이스 사용
+USE MYSQL;
+
+-- 사용자 확인
+SELECT *
+	FROM USER;
+  
+/* 사용자 추가 */
+-- 사용자 아이디 및 비밀번호 생성
+CREATE USER "TEST"@LOCALHOST IDENTIFIED BY "TEST"; #LOCAL에서 접속이 가능하다는 의미
+# IDENTIFIED BY (비밀번호)
+
+-- 사용자 확인
+SELECT *
+	FROM USER;
+
+-- 사용자 비밀번호 변경
+SET PASSWORD FOR "TEST"@LOCALHOST = "1234";
+
+/* 권한 부여 및 제거 */
+-- 권한 : CREATE, ALTER, DROP, INSERT, DELETE, UPDATE, SELECT 등
+
+/* 특정 권한 부여 */
+GRANT SELECT, DELETE ON PRACTICE.회원테이블 TO "TEST"@LOCALHOST;
+# GRANT (DML) DATABASE명.TABLE명 TO (사용자)@위치
+
+/* 특정 권한 제거 */
+REVOKE DELETE ON PRACTICE.회원테이블 FROM "TEST"@LOCALHOST;
+
+/* 모든 권한 부여 */
+GRANT ALL ON PRACTICE.회원테이블 TO "TEST"@LOCALHOST;
+
+/* 모든 권한 제거 */
+REVOKE ALL ON PRACTICE.회원테이블 FROM "TEST"@LOCALHOST;
+
+/* ### 사용자 삭제 ### */
+-- 사용자 삭제
+DROP USER "TEST"@LOCALHOST;
+
+-- 사용자 확인
+SELECT *
+	FROM USER;
+
+### 트랜젝션 제어어(TCL) ###
+
+/* 데이터베이스 사용 */
+USE PRACTICE;
+
+/* 테이블 생성 */
+-- (회원테이블 존재할 시, 회원테이블 삭제)
+DROP TABLE 회원테이블;
+
+-- 회원테이블 생성
+CREATE TABLE 회원테이블(
+회원번호 INT PRIMARY KEY,
+이름 VARCHAR(20),
+가입일자 DATE NOT NULL,
+수신동의 BIT
+);
+
+-- 회원테이블 조회
+SELECT *
+	FROM 회원테이블;
+  
+/* BEGIN + 취소(ROLLBACK) */
+BEGIN; # 트랜젝션 시작
+
+-- 데이터 삽입
+INSERT INTO 회원테이블 VALUES(1001, "홍길동", "2021-01-02", 1);
+
+-- 회원테이블 조회
+SELECT * FROM 회원테이블;
+
+-- 취소
+ROLLBACK;
+
+-- 다시 회원테이블 조회
+SELECT * FROM 회원테이블;
+
+/* BEGIN + 실행(COMMIT) */
+-- 트랜젝션 시작
+BEGIN;
+
+-- 데이터 삽입
+INSERT INTO 회원테이블 VALUES (1005, "장보고", "2021-01-06", 1);
+
+-- 실행
+COMMIT;
+
+-- 회원테이블 조회
+SELECT * FROM 회원테이블;
+
+/* 임시저장(SAVEPOINT) */
+-- 회원테이블에 데이터 존재할 시 데이터 삭제
+DELETE FROM 회원테이블;
+
+-- 회원테이블 조회
+SELECT * FROM 회원테이블;
+
+-- 트랜젝션 시작
+BEGIN;
+
+-- 데이터 삽입
+INSERT INTO 회원테이블 VALUES (1005, "장보고", "2021-01-06", 1);
+
+-- SAVEPOINT 지정
+SAVEPOINT S1;
+
+-- 1005 회원 이름 수정
+UPDATE 회원테이블
+	SET 이름 = "이순신";
+  
+-- SAVEPOINT 지정2
+SAVEPOINT S2;
+
+-- 1005 회원 데이터 삭제
+DELETE
+	FROM 회원테이블;
+
+-- SAVEPOINT 지정3
+SAVEPOINT S3;
+
+-- 회원테이블 조회
+SELECT * FROM 회원테이블;
+
+-- SAVEPOINT S2 저장점으로 ROLLBACK
+ROLLBACK TO S2;
+
+-- 회원테이블 조회
+SELECT * FROM 회원테이블;
+
+-- 실행
+COMMIT;
+
+-- 회원테이블 조회
+SELECT * FROM 회원테이블;
+
+-- COMMIT 후 다시 ROLLBACK하면 안됨!
+ROLLBACK TO S1; # SAVEPOINT DOES NOT EXIST 에러 발생
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
