@@ -1,0 +1,192 @@
+USE PRACTICE;
+
+/* SELECT 절 서브 쿼리 */
+-- SLEELCT 명령문 안에 SELECT 명령문
+SELECT *,
+			 (SELECT GENDER FROM CUSTOMER WHERE A.MEM_NO = MEM_NO) AS GENDER
+	FROM SALES AS A;
+  
+-- 확인
+SELECT *
+	FROM CUSTOMER
+ WHERE MEM_NO = "1000970";
+
+-- SELECT 서브 쿼리 문은 처리속도가 느려서 잘 사용하지 않는다.
+-- SELECT 서브쿼리 VS 테이블 결합(JOIN) 처리 속도 비교
+SELECT A.*, B.GENDER
+	FROM SALES AS A
+  LEFT
+  JOIN CUSTOMER AS B
+		ON A.MEM_NO = B.MEM_NO;
+-- JOIN : 0.000sec / 서브쿼리 : 0.765sec
+
+/* FROM절 서브쿼리 */
+-- FROM 명령문 안에 SELECT 명령문
+SELECT *
+	FROM (
+			 SELECT MEM_NO, COUNT(ORDER_NO) AS 주문횟수
+				 FROM SALES
+				GROUP
+					 BY MEM_NO
+			 )AS A;
+  
+/* WHERE절 서브쿼리 */
+SELECT COUNT(ORDER_NO) AS 주문횟수
+	FROM SALES
+ WHERE MEM_NO IN (SELECT MEM_NO FROM CUSTOMER WHERE YEAR(JOIN_DATE) = 2019); # YEAR : 날짜형 함수, 해당 연도 변환
+ 
+-- YEAR 함수 예시
+SELECT *, YEAR(JOIN_DATE) AS 년도
+	FROM CUSTOMER;
+  
+/* IN 리스트 */
+-- WHERE 절에 있는 IN 구문
+SELECT MEM_NO FROM CUSTOMER WHERE YEAR(JOIN_DATE) = 2019;
+-- => ("1000001", "1000002", ... ) 같이 리스트 형태로 출력
+
+-- WHERE절 서브 쿼리 VS 데이터 결합(JOIN) 결과 값 비교
+SELECT COUNT(A.ORDER_NO) AS 주문횟수
+	FROM SALES AS A
+  LEFT
+	JOIN CUSTOMER AS B
+	  ON A.MEM_NO = B.MEM_NO
+ WHERE YEAR(B.JOIN_DATE) = 2019;
+ 
+/* 서브 쿼리 + 테이블 결합 */
+-- 임시테이블 생성
+CREATE TEMPORARY TABLE SALES_SUB_QUERY
+SELECT A.구매횟수, B.*
+	FROM (
+				SELECT MEM_NO, COUNT(ORDER_NO) AS 구매횟수
+					FROM SALES
+				 GROUP
+						BY MEM_NO
+			 )AS A
+ INNER
+  JOIN CUSTOMER AS B
+		ON A.MEM_NO = B.MEM_NO;
+    
+-- 임시테이블 조회
+SELECT * FROM SALES_SUB_QUERY;
+
+/* 거주지역별로 구매횟수 집계 */
+SELECT ADDR, SUM(구매횟수) AS 구매횟수
+	FROM SALES_SUB_QUERY
+ WHERE GENDER = "MAN"
+ GROUP
+		BY ADDR;
+
+-- 구매횟수 100회 미만 조건으로 필터링
+SELECT ADDR, SUM(구매횟수) AS 구매횟수
+	FROM SALES_SUB_QUERY
+ WHERE GENDER = "MAN"
+ GROUP
+		BY ADDR
+HAVING 구매횟수 < 100
+ ORDER
+		BY 구매횟수 ASC;
+    
+    
+/* ### 단원 복습 ### */
+
+/* 데이터 조회 */
+-- 1. CUSTOMER 테이블의 가입연도별 및 지역별 회원수를 조회하시오.
+SELECT * FROM CUSTOMER;
+SELECT YEAR(JOIN_DATE) AS 가입연도, ADDR, COUNT(MEM_NO) AS 회원수
+	FROM CUSTOMER
+ GROUP
+		BY 가입연도, ADDR;
+    
+-- 2. (1) 명령어에서 성별이 남성회원 조건을 추가한 뒤, 회원수가 50명 이상인 조건을 추가하시오.
+SELECT YEAR(JOIN_DATE) AS 가입연도, ADDR, COUNT(MEM_NO) AS 회원수
+	FROM CUSTOMER
+ WHERE GENDER = "MAN"
+ GROUP
+		BY 가입연도, ADDR
+HAVING 회원수 > 50;
+
+-- 3. (2) 명령어에서 회원수를 내림차순으로 정렬하시오.
+SELECT YEAR(JOIN_DATE) AS 가입연도, ADDR, COUNT(MEM_NO) AS 회원수
+	FROM CUSTOMER
+ WHERE GENDER = "MAN"
+ GROUP
+		BY 가입연도, ADDR
+HAVING 회원수 > 50
+ ORDER
+		BY 가입연도, 회원수 DESC;
+    
+/* 데이터 조회 + 테이블 결합 */
+-- 1. SALES 테이블 기준으로 PRODUCT 테이블을 LEFT JOIN 하시오.
+SELECT * FROM SALES;
+SELECT * FROM PRODUCT; # PRODUCT_CODE 겹침
+
+SELECT *
+	FROM SALES AS A
+  LEFT
+  JOIN PRODUCT AS B
+    ON A.PRODUCT_CODE = B.PRODUCT_CODE;
+    
+-- 2. (1)에서 결합된 테이블을 활용하여, 브랜드별 판매수량을 구하시오.
+CREATE TEMPORARY TABLE SALES_PRODUCT_LEFT_JOIN
+SELECT A.*, B.BRAND
+	FROM SALES AS A
+  LEFT
+  JOIN PRODUCT AS B
+    ON A.PRODUCT_CODE = B.PRODUCT_CODE;
+ 
+ SELECT * FROM SALES_PRODUCT_LEFT_JOIN;
+ 
+ SELECT BRAND, SUM(SALES_QTY) AS 판매수량
+	 FROM SALES_PRODUCT_LEFT_JOIN
+	GROUP
+		 BY BRAND;
+     
+-- 3. CUSTOMER 및 SALES 테이블을 활용하여, 회원가입만하고 주문이력이 없는 회원수를 구하시오.
+SELECT * FROM CUSTOMER;
+SELECT * FROM SALES;
+
+SELECT COUNT(A.MEM_NO) AS 회원번호
+	FROM CUSTOMER AS A
+  LEFT
+	JOIN SALES AS B
+		ON A.MEM_NO = B.MEM_NO
+ WHERE B.ORDER_NO IS NULL;
+  
+/* 데이터 조회 + 테이블 결합 + 서브 쿼리 */
+-- 1. FROM절 서브쿼리를 활용하여, SALES 테이블의 PRODUCT_CODE별 판매수량을 구하시오
+SELECT * FROM SALES;
+SELECT * FROM PRODUCT;
+
+SELECT *
+	FROM (
+				SELECT PRODUCT_CODE, SUM(SALES_QTY) AS 판매수량
+					FROM SALES
+				 GROUP
+						BY PRODUCT_CODE
+				) AS A;
+
+-- 2. (1) 명령어를 활용하여, PRODUCT 테이블과 LEFT JOIN 하시오.
+SELECT *
+	FROM (
+				SELECT PRODUCT_CODE, SUM(SALES_QTY) AS 판매수량
+					FROM SALES
+				 GROUP
+						BY PRODUCT_CODE
+				) AS A
+	LEFT
+  JOIN PRODUCT AS B
+		ON A.PRODUCT_CODE = B.PRODUCT_CODE;
+    
+-- 3. (2) 명령어를 활용하여, 카테고리 및 브랜드별 판매수량을 구하시오.
+SELECT B.CATEGORY, B.BRAND, SUM(판매수량) AS 판매수량
+	FROM (
+				SELECT PRODUCT_CODE, SUM(SALES_QTY) AS 판매수량
+					FROM SALES
+				 GROUP
+						BY PRODUCT_CODE
+				) AS A
+	LEFT
+  JOIN PRODUCT AS B
+		ON A.PRODUCT_CODE = B.PRODUCT_CODE
+ GROUP
+		BY B.CATEGORY, B.BRAND;
